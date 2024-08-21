@@ -15,22 +15,22 @@
 #
 #
 # Phantom App imports
-import phantom.app as phantom
-from phantom.base_connector import BaseConnector
-from phantom.action_result import ActionResult
-
-from skybox_consts import *
-import requests
-import json
 import base64
+import json
 import ssl
-
 from datetime import datetime
+
+import phantom.app as phantom
+import requests
 from bs4 import BeautifulSoup, UnicodeDammit
-from urllib2 import HTTPSHandler
+from phantom.action_result import ActionResult
+from phantom.base_connector import BaseConnector
 from suds.client import Client
 from suds.sudsobject import asdict
 from suds.transport.https import HttpAuthenticated
+from urllib2 import HTTPSHandler
+
+from skybox_consts import *
 
 
 class RetVal(tuple):
@@ -344,8 +344,9 @@ class SkyboxConnector(BaseConnector):
 
 if __name__ == '__main__':
 
-    import pudb
     import argparse
+
+    import pudb
 
     pudb.set_trace()
 
