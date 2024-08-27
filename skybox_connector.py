@@ -17,7 +17,6 @@
 # Phantom App imports
 import base64
 import json
-import ssl
 from datetime import datetime
 
 import phantom.app as phantom
@@ -27,8 +26,6 @@ from phantom.action_result import ActionResult
 from phantom.base_connector import BaseConnector
 from suds.client import Client
 from suds.sudsobject import asdict
-from suds.transport.https import HttpAuthenticated
-from urllib2 import HTTPSHandler
 
 from skybox_consts import *
 
@@ -36,14 +33,6 @@ from skybox_consts import *
 class RetVal(tuple):
     def __new__(cls, val1, val2=None):
         return tuple.__new__(RetVal, (val1, val2))
-
-
-class NoVerifyTransport(HttpAuthenticated):
-    def u2handlers(self):
-        handlers = HttpAuthenticated.u2handlers(self)
-        context = ssl.create_default_context()
-        handlers.append(HTTPSHandler(context=context))
-        return handlers
 
 
 class SkyboxConnector(BaseConnector):
@@ -59,21 +48,18 @@ class SkyboxConnector(BaseConnector):
     def _create_client(self, action_result, service):
         try:
             wsdl_url = SKYBOX_WSDL.format(base_url=self._base_url, service=service)
-            base64string = base64.encodestring('%s:%s' % (self._username, self._password)).replace('\n', '')
+            auth_string = '%s:%s' % (self._username, self._password)
+            base64string = base64.b64encode(auth_string.encode('utf-8')).decode('utf-8')
             authenticationHeader = {
                 "Authorization": "Basic %s" % base64string
             }
             self._client = Client(url=wsdl_url, headers=authenticationHeader)
 
         except Exception as e:
-            if e.message:
-                try:
-                    error_msg = UnicodeDammit(e.message).unicode_markup.encode('utf-8')
-                except:
-                    error_msg = "Unknown error occurred. Please check the asset configuration and|or action parameters."
-            else:
+            try:
+                error_msg = UnicodeDammit(str(e)).unicode_markup.encode('utf-8')
+            except:
                 error_msg = "Unknown error occurred. Please check the asset configuration and|or action parameters."
-            # self.save_progress("Last Sent: {}\r\n\r\nLast Received: {}".format(self._client.last_sent(), self._client.last_received()))
             return action_result.set_status(phantom.APP_ERROR, 'Could not connect to the Skybox Security API endpoint {0}'.format(error_msg))
 
         return phantom.APP_SUCCESS
@@ -320,12 +306,11 @@ class SkyboxConnector(BaseConnector):
 
         # get the asset config
         config = self.get_config()
-
         self._base_url = config.get(SKYBOX_CONFIG_BASE_URL).rstrip('/')
         self._base_url = UnicodeDammit(self._base_url).unicode_markup.encode('utf-8')
         self._username = UnicodeDammit(config[SKYBOX_CONFIG_USERNAME]).unicode_markup.encode('utf-8')
         self._password = config[SKYBOX_CONFIG_PASSWORD]
-        self._auth = base64.b64encode('{0}:{1}'.format(self._username, self._password))
+        self._auth = base64.b64encode('{0}:{1}'.format(self._username, self._password).encode('utf-8'))
         return phantom.APP_SUCCESS
 
     def finalize(self):
